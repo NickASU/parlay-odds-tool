@@ -1,0 +1,590 @@
+/* ===========================================================
+   MATRIX MONITOR STYLE – BLACK + GREEN TERMINAL VIBE
+   =========================================================== */
+
+/* Global reset + box sizing */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Root / base */
+
+:root {
+  font-family: "JetBrains Mono", "Fira Code", Consolas, Menlo, monospace;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: dark;
+  color: #8fffd3;
+  background-color: #000000;
+
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+
+  /* Matrix-ish background: subtle vertical streaks + dark gradient */
+  background:
+    radial-gradient(circle at top, #061510 0%, #020403 55%, #000000 100%),
+    repeating-linear-gradient(
+      to bottom,
+      rgba(0, 255, 102, 0.03) 0px,
+      rgba(0, 255, 102, 0.03) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+  color: #8fffd3;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* ===========================================================
+   APP SHELL – NO BIG WHITE SPOTS
+   =========================================================== */
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  padding: 16px 12px 24px;
+}
+
+.app-inner {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+
+  /* Dark “monitor glass” */
+  background: radial-gradient(circle at top, #04120b 0%, #010403 70%);
+  border: 1px solid rgba(0, 255, 102, 0.25);
+  border-radius: 4px;
+  box-shadow:
+    0 0 20px rgba(0, 0, 0, 0.9),
+    0 0 35px rgba(0, 255, 102, 0.1);
+  padding: 12px 14px 18px;
+}
+
+/* No bright gutters: everything outside app-inner is pure black/dark */
+
+.site-main {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ===========================================================
+   HEADER / NAV
+   =========================================================== */
+
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(0, 255, 102, 0.25);
+}
+
+.site-logo {
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #9af5c9;
+  text-shadow:
+    0 0 4px rgba(0, 255, 102, 0.6),
+    0 0 10px rgba(0, 0, 0, 0.9);
+}
+
+.site-nav {
+  display: flex;
+  gap: 12px;
+  font-size: 0.8rem;
+}
+
+.site-nav-link {
+  color: #57c79c;
+  text-decoration: none;
+  position: relative;
+  padding-bottom: 1px;
+}
+
+.site-nav-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 1px;
+  width: 0;
+  background: #00ff66;
+  transition: width 0.12s ease;
+}
+
+.site-nav-link:hover {
+  color: #a9ffe1;
+}
+
+.site-nav-link:hover::after {
+  width: 100%;
+}
+
+/* ===========================================================
+   HERO
+   =========================================================== */
+
+.hero {
+  padding: 10px 0 4px;
+}
+
+.hero-content {
+  max-width: 640px;
+}
+
+.hero-title {
+  margin: 0 0 4px;
+  font-size: clamp(1.8rem, 3vw, 2.2rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #a9ffe1;
+  text-shadow:
+    0 0 5px rgba(0, 255, 102, 0.5),
+    0 0 12px rgba(0, 0, 0, 0.9);
+}
+
+.hero-subtitle {
+  margin: 0 0 10px;
+  font-size: 0.86rem;
+  color: #6de0b0;
+}
+
+.hero-cta-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.hero-cta {
+  font-size: 0.8rem;
+}
+
+.hero-note {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #4fa07c;
+}
+
+.hero-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.hero-badge {
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 255, 102, 0.35);
+  background: rgba(2, 19, 10, 0.9);
+  font-size: 0.72rem;
+  color: #a9ffe1;
+}
+
+/* ===========================================================
+   CALCULATOR SECTION
+   =========================================================== */
+
+.calculator-section {
+  padding: 4px 0 4px;
+}
+
+.app-header {
+  margin-bottom: 12px;
+}
+
+.app-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #a9ffe1;
+}
+
+.app-subtitle {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #6de0b0;
+}
+
+/* Grid layout for calculator columns */
+
+.app-grid {
+  display: grid;
+  gap: 12px;
+}
+
+@media (min-width: 880px) {
+  .app-grid {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  }
+}
+
+/* ===========================================================
+   CARDS – PANELS
+   =========================================================== */
+
+.card {
+  background: #020806;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 255, 102, 0.35);
+  box-shadow:
+    0 0 12px rgba(0, 0, 0, 0.9),
+    inset 0 0 8px rgba(0, 0, 0, 0.8);
+  position: relative;
+  overflow: hidden;
+}
+
+/* subtle inner vignette */
+
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 255, 102, 0.05);
+  pointer-events: none;
+}
+
+.card-section {
+  padding: 10px 12px;
+  border-top: 1px solid rgba(0, 255, 102, 0.08);
+  position: relative;
+}
+
+.card-section:first-of-type {
+  border-top: none;
+}
+
+.card-section--with-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.card-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px;
+}
+
+.card-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #8fffd3;
+}
+
+/* ===========================================================
+   FORM ELEMENTS
+   =========================================================== */
+
+.field-label {
+  display: block;
+  font-size: 0.7rem;
+  color: #6de0b0;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.input {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  border-radius: 2px;
+  border: 1px solid rgba(0, 255, 102, 0.4);
+  background: #020806;
+  color: #a9ffe1;
+  font-size: 0.86rem;
+  padding: 6px 7px;
+  outline: none;
+  box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.9);
+  transition:
+    border-color 0.12s ease,
+    box-shadow 0.12s ease,
+    background-color 0.12s ease;
+}
+
+.input::placeholder {
+  color: #385947;
+}
+
+.input:focus {
+  border-color: #00ff66;
+  background-color: #04100a;
+  box-shadow:
+    0 0 4px rgba(0, 255, 102, 0.6),
+    inset 0 0 4px rgba(0, 0, 0, 0.7);
+}
+
+/* errors & helper text */
+
+.field-helper {
+  margin-top: 3px;
+  font-size: 0.75rem;
+  color: #6de0b0;
+}
+
+.field-error {
+  margin-top: 3px;
+  font-size: 0.75rem;
+  color: #ff6b6b;
+}
+
+.field-error--top {
+  margin-top: 8px;
+}
+
+/* ===========================================================
+   BUTTONS – MATRIX TERMINAL KEYS
+   =========================================================== */
+
+.btn {
+  border-radius: 999px;
+  font-size: 0.76rem;
+  padding: 5px 12px;
+  cursor: pointer;
+  border: 1px solid rgba(0, 255, 102, 0.7);
+  background: linear-gradient(180deg, #032015 0%, #02140d 100%);
+  color: #a9ffe1;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+
+  box-shadow:
+    0 2px 0 #000,
+    0 0 6px rgba(0, 255, 102, 0.35);
+  transition:
+    transform 0.08s ease,
+    box-shadow 0.12s ease,
+    background-color 0.12s ease;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow:
+    0 3px 0 #000,
+    0 0 10px rgba(0, 255, 102, 0.55);
+  background-color: #052818;
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow:
+    0 1px 0 #000,
+    0 0 6px rgba(0, 255, 102, 0.4);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.btn-outline {
+  background: transparent;
+  color: #8fffd3;
+  border-color: rgba(0, 255, 102, 0.6);
+  box-shadow: none;
+}
+
+.btn-outline:hover:not(:disabled) {
+  background: rgba(0, 255, 102, 0.05);
+}
+
+/* Smaller */
+
+.btn-sm {
+  padding: 3px 9px;
+  font-size: 0.72rem;
+}
+
+/* ===========================================================
+   LEGS LIST (PAIRS OF INPUTS)
+   =========================================================== */
+
+.legs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.leg-card {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-start;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 255, 102, 0.3);
+  padding: 8px 9px;
+  background: #020806;
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.9);
+}
+
+.leg-main {
+  flex: 1 1 220px;
+}
+
+.leg-actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 520px) {
+  .leg-card {
+    flex-direction: column;
+  }
+
+  .leg-actions {
+    justify-content: flex-end;
+  }
+}
+
+.leg-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 3px;
+}
+
+.leg-label {
+  font-size: 0.72rem;
+  color: #57c79c;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+}
+
+/* ===========================================================
+   SUMMARY
+   =========================================================== */
+
+.summary-grid {
+  display: grid;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.summary-label {
+  font-size: 0.78rem;
+  color: #6de0b0;
+}
+
+.summary-value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #a9ffe1;
+  text-shadow: 0 0 4px rgba(0, 255, 102, 0.5);
+}
+
+.summary-sub {
+  font-size: 0.72rem;
+  margin-left: 4px;
+  color: #57c79c;
+  font-weight: 400;
+}
+
+/* ===========================================================
+   INFO SECTION
+   =========================================================== */
+
+.info-section {
+  padding: 10px 0 4px;
+  border-top: 1px solid rgba(0, 255, 102, 0.25);
+}
+
+.info-title {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #a9ffe1;
+}
+
+.info-grid {
+  display: grid;
+  gap: 10px;
+}
+
+@media (min-width: 880px) {
+  .info-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.info-block h3 {
+  margin: 0 0 4px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #8fffd3;
+}
+
+.info-block p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #6de0b0;
+}
+
+.info-disclaimer {
+  margin-top: 10px;
+  font-size: 0.72rem;
+  color: #4fa07c;
+}
+
+/* ===========================================================
+   FOOTER
+   =========================================================== */
+
+.site-footer {
+  margin-top: 16px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0, 255, 102, 0.25);
+  font-size: 0.72rem;
+  color: #4fa07c;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+@media (min-width: 720px) {
+  .site-footer {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
