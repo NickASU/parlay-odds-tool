@@ -223,9 +223,9 @@ export default function App() {
           {/* HERO – you can change this text however you want */}
           <section className="hero" id="top">
             <div className="hero-content">
-              <h1 className="hero-title">Decode your parlay.</h1>
+              <h1 className="hero-title">Check Your Bets</h1>
               <p className="hero-subtitle">
-                Type in the odds, see what the machine is really telling you.
+                Implied odds and more... with a fun theme
               </p>
 
               <div className="hero-cta-row">
@@ -233,7 +233,7 @@ export default function App() {
                   Open Calculator
                 </a>
                 <p className="hero-note">
-                  No promos. No boosts. Just the math.
+                  No sportsbook affiliates
                 </p>
               </div>
 
@@ -250,7 +250,7 @@ export default function App() {
             <header className="app-header">
               <h2 className="app-title">Parlay Calculator</h2>
               <p className="app-subtitle">
-                Enter your odds. Get the truth.
+                Enter your odds
               </p>
             </header>
 
@@ -627,7 +627,7 @@ export default function App() {
 
         <footer className="site-footer">
           <span>Parlay Odds Tool</span>
-          <span>Built so the math isn&apos;t a mystery.</span>
+          <span>Built to help make smart decisions.</span>
         </footer>
       </div>
     </div>
