@@ -41,6 +41,7 @@ export default function App() {
     { id: 1, americanOdds: "-110", opponentOdds: "-110" },
     { id: 2, americanOdds: "-110", opponentOdds: "-110" },
   ]);
+  const [copied, setCopied] = useState(false);
 
   const parsedStake = useMemo(() => {
     const n = Number(stake);
@@ -151,6 +152,28 @@ export default function App() {
     };
   }, [parsedStake, validLegs, legs, parlayMetrics]);
 
+  // TEXT TO COPY
+  const summaryText = useMemo(() => {
+    if (!parlayMetrics || !parsedStake || !validLegs.length) return "";
+
+    const legsStr = legs
+      .map((leg, i) => `Leg ${i + 1}: ${leg.americanOdds}`)
+      .join(" | ");
+
+    return [
+      `Parlay`,
+      `Stake $${parsedStake.toFixed(2)}`,
+      `Implied ${(
+        parlayMetrics.parlayImpliedProb * 100
+      ).toFixed(2)}%`,
+      `Return $${parlayMetrics.potentialReturn.toFixed(2)}`,
+      `Profit $${parlayMetrics.profit.toFixed(2)}`,
+      legsStr && `Legs ${legsStr}`,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  }, [parlayMetrics, parsedStake, validLegs.length, legs]);
+
   function updateLeg(
     id: number,
     field: "americanOdds" | "opponentOdds",
@@ -175,13 +198,15 @@ export default function App() {
   }
 
   function removeLeg(id: number) {
-    setLegs((prev) => (prev.length <= 1 ? prev : prev.filter((l) => l.id !== id)));
+    setLegs((prev) =>
+      prev.length <= 1 ? prev : prev.filter((l) => l.id !== id)
+    );
   }
 
   return (
     <div className="app">
       <div className="app-inner">
-        {/* Simple top nav / brand */}
+        {/* HEADER */}
         <header className="site-header">
           <div className="site-logo">Parlay Odds Tool</div>
           <nav className="site-nav">
@@ -195,42 +220,39 @@ export default function App() {
         </header>
 
         <main className="site-main">
-          {/* HERO */}
-         <section className="hero" id="top">
-  <div className="hero-content">
-    <h1 className="hero-title">
-      Parlay Checker
-    </h1>
-    <p className="hero-subtitle">
-      At a minimum, check your implied win percentage, include both sides of the bet to see house edge
-    </p>
+          {/* HERO – you can change this text however you want */}
+          <section className="hero" id="top">
+            <div className="hero-content">
+              <h1 className="hero-title">Decode your parlay.</h1>
+              <p className="hero-subtitle">
+                Type in the odds, see what the machine is really telling you.
+              </p>
 
-    <div className="hero-cta-row">
-      <a href="#calculator" className="btn hero-cta">
-        Use the parlay calculator
-      </a>
-      <p className="hero-note">
-Check before you bet      </p>
-    </div>
+              <div className="hero-cta-row">
+                <a href="#calculator" className="btn hero-cta">
+                  Open Calculator
+                </a>
+                <p className="hero-note">
+                  No promos. No boosts. Just the math.
+                </p>
+              </div>
 
-    <div className="hero-badges">
-      <span className="hero-badge">Implied chance</span>
-      <span className="hero-badge">Payout &amp; profit</span>
-    </div>
-  </div>
-</section>
-
+              <div className="hero-badges">
+                <span className="hero-badge">Implied chance</span>
+                <span className="hero-badge">Payout &amp; profit</span>
+                <span className="hero-badge">No-vig view (optional)</span>
+              </div>
+            </div>
+          </section>
 
           {/* CALCULATOR */}
           <section className="calculator-section" id="calculator">
             <header className="app-header">
-  <h2 className="app-title">Parlay odds &amp; payout calculator</h2>
-  <p className="app-subtitle">
-    Add your legs, enter your stake, and see the chance it hits,
-    what it returns, and what you actually win.
-  </p>
-</header>
-
+              <h2 className="app-title">Parlay Calculator</h2>
+              <p className="app-subtitle">
+                Enter your odds. Get the truth.
+              </p>
+            </header>
 
             <div className="app-grid">
               {/* LEFT COLUMN – setup */}
@@ -248,7 +270,9 @@ Check before you bet      </p>
                     className="input"
                   />
                   {!parsedStake && stake.trim() !== "" && (
-                    <p className="field-error">Enter a positive stake amount.</p>
+                    <p className="field-error">
+                      Enter a positive stake amount.
+                    </p>
                   )}
                 </div>
 
@@ -294,18 +318,23 @@ Check before you bet      </p>
                               type="number"
                               value={leg.americanOdds}
                               onChange={(e) =>
-                                updateLeg(leg.id, "americanOdds", e.target.value)
+                                updateLeg(
+                                  leg.id,
+                                  "americanOdds",
+                                  e.target.value
+                                )
                               }
                               placeholder="-110"
                               className="input"
                             />
 
-                            {!isValid && leg.americanOdds.trim() !== "" && (
-                              <p className="field-error">
-                                Enter non-zero American odds like -110, +150,
-                                -200, etc.
-                              </p>
-                            )}
+                            {!isValid &&
+                              leg.americanOdds.trim() !== "" && (
+                                <p className="field-error">
+                                  Enter non-zero American odds like -110,
+                                  +150, -200, etc.
+                                </p>
+                              )}
 
                             {isValid && (
                               <p className="field-helper">
@@ -318,14 +347,22 @@ Check before you bet      </p>
                               </p>
                             )}
 
-                            <label className="field-label" style={{ marginTop: 8 }}>
-                              Opponent odds (optional, for no-vig fair payout)
+                            <label
+                              className="field-label"
+                              style={{ marginTop: 8 }}
+                            >
+                              Opponent odds (optional, for no-vig fair
+                              payout)
                             </label>
                             <input
                               type="number"
                               value={leg.opponentOdds}
                               onChange={(e) =>
-                                updateLeg(leg.id, "opponentOdds", e.target.value)
+                                updateLeg(
+                                  leg.id,
+                                  "opponentOdds",
+                                  e.target.value
+                                )
                               }
                               placeholder="-110"
                               className="input"
@@ -349,8 +386,8 @@ Check before you bet      </p>
 
                   {!allValid && (
                     <p className="field-error field-error--top">
-                      Fill out valid American odds for all legs to see combined
-                      parlay results.
+                      Fill out valid American odds for all legs to see
+                      combined parlay results.
                     </p>
                   )}
                 </div>
@@ -376,56 +413,106 @@ Check before you bet      </p>
                   )}
 
                   {parlayMetrics && (
-                    <div className="summary-grid">
-                      <div className="summary-item">
-                        <span className="summary-label">
-                          Your parlay implied probability
+                    <>
+                      {/* copy summary row */}
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          marginBottom: 6,
+                          gap: 8,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: "0.75rem",
+                            color: "#6de0b0",
+                          }}
+                        >
+                          Copy this parlay as text
                         </span>
-                        <span className="summary-value">
-                          {(parlayMetrics.parlayImpliedProb * 100).toFixed(2)}%
-                          <span className="summary-sub">
-                            {" "}
-                            (about 1 in{" "}
-                            {(1 / parlayMetrics.parlayImpliedProb).toFixed(1)})
+                        <button
+                          type="button"
+                          className="btn btn-outline btn-sm"
+                          onClick={() => {
+                            if (!summaryText) return;
+                            navigator.clipboard
+                              .writeText(summaryText)
+                              .then(() => {
+                                setCopied(true);
+                                setTimeout(
+                                  () => setCopied(false),
+                                  1500
+                                );
+                              })
+                              .catch(() => {
+                                // ignore clipboard errors
+                              });
+                          }}
+                        >
+                          {copied ? "Copied" : "Copy"}
+                        </button>
+                      </div>
+
+                      <div className="summary-grid">
+                        <div className="summary-item">
+                          <span className="summary-label">
+                            Your parlay implied probability
                           </span>
-                        </span>
-                      </div>
+                          <span className="summary-value">
+                            {(
+                              parlayMetrics.parlayImpliedProb * 100
+                            ).toFixed(2)}
+                            %
+                            <span className="summary-sub">
+                              {" "}
+                              (about 1 in{" "}
+                              {(
+                                1 / parlayMetrics.parlayImpliedProb
+                              ).toFixed(1)}
+                              )
+                            </span>
+                          </span>
+                        </div>
 
-                      <div className="summary-item">
-                        <span className="summary-label">
-                          Payout based on stake (return)
-                        </span>
-                        <span className="summary-value">
-                          ${parlayMetrics.potentialReturn.toFixed(2)}
-                        </span>
-                      </div>
+                        <div className="summary-item">
+                          <span className="summary-label">
+                            Payout based on stake (return)
+                          </span>
+                          <span className="summary-value">
+                            $
+                            {parlayMetrics.potentialReturn.toFixed(2)}
+                          </span>
+                        </div>
 
-                      <div className="summary-item">
-                        <span className="summary-label">
-                          Profit (winnings)
-                        </span>
-                        <span className="summary-value">
-                          ${parlayMetrics.profit.toFixed(2)}
-                        </span>
-                      </div>
+                        <div className="summary-item">
+                          <span className="summary-label">
+                            Profit (winnings)
+                          </span>
+                          <span className="summary-value">
+                            ${parlayMetrics.profit.toFixed(2)}
+                          </span>
+                        </div>
 
-                      <div className="summary-item">
-                        <span className="summary-label">
-                          Combined decimal odds (from your odds)
-                        </span>
-                        <span className="summary-value">
-                          {parlayMetrics.combinedDecimal.toFixed(2)}
-                        </span>
+                        <div className="summary-item">
+                          <span className="summary-label">
+                            Combined decimal odds (from your odds)
+                          </span>
+                          <span className="summary-value">
+                            {parlayMetrics.combinedDecimal.toFixed(2)}
+                          </span>
+                        </div>
                       </div>
-                    </div>
+                    </>
                   )}
 
                   {!parlayMetrics &&
                     parsedStake &&
                     validLegs.length > 0 && (
                       <p className="field-error">
-                        Something&apos;s off with the current inputs. Double-check
-                        your odds.
+                        Something&apos;s off with the current inputs.
+                        Double-check your odds.
                       </p>
                     )}
                 </div>
@@ -438,9 +525,9 @@ Check before you bet      </p>
 
                   {!fairParlayMetrics && (
                     <p className="field-helper">
-                      To estimate a no-vig parlay payout, enter opponent odds for
-                      every leg. We&apos;ll strip out the house edge using both
-                      sides of the market.
+                      To estimate a no-vig parlay payout, enter opponent
+                      odds for every leg. We&apos;ll strip out the house
+                      edge using both sides of the market.
                     </p>
                   )}
 
@@ -451,7 +538,10 @@ Check before you bet      </p>
                           Fair parlay probability (no-vig)
                         </span>
                         <span className="summary-value">
-                          {(fairParlayMetrics.parlayProbFair * 100).toFixed(2)}%
+                          {(
+                            fairParlayMetrics.parlayProbFair * 100
+                          ).toFixed(2)}
+                          %
                         </span>
                       </div>
                       <div className="summary-item">
@@ -467,7 +557,8 @@ Check before you bet      </p>
                           Fair potential return (no-vig)
                         </span>
                         <span className="summary-value">
-                          ${fairParlayMetrics.fairReturn.toFixed(2)}
+                          $
+                          {fairParlayMetrics.fairReturn.toFixed(2)}
                         </span>
                       </div>
                       <div className="summary-item">
@@ -475,7 +566,8 @@ Check before you bet      </p>
                           Fair profit (no-vig)
                         </span>
                         <span className="summary-value">
-                          ${fairParlayMetrics.fairProfit.toFixed(2)}
+                          $
+                          {fairParlayMetrics.fairProfit.toFixed(2)}
                         </span>
                       </div>
 
@@ -485,7 +577,10 @@ Check before you bet      </p>
                             Estimated book edge on this parlay
                           </span>
                           <span className="summary-value">
-                            {(fairParlayMetrics.edgePct * 100).toFixed(2)}%
+                            {(
+                              fairParlayMetrics.edgePct * 100
+                            ).toFixed(2)}
+                            %
                           </span>
                         </div>
                       )}
@@ -496,47 +591,44 @@ Check before you bet      </p>
             </div>
           </section>
 
-          {/* INFO / SEO SECTION */}
-         <section className="info-section" id="how-it-works">
-  <h2 className="info-title">Check if confused</h2>
-  <div className="info-grid">
-    <div className="info-block">
-      <h3>Shows the real chance</h3>
-      <p>
-        Odds like -110 or +250 hide a percentage. The calculator turns
-        your parlay into a single implied chance so you can see how
-        often it&apos;s supposed to hit.
-      </p>
-    </div>
-    <div className="info-block">
-      <h3>Spells out the money</h3>
-      <p>
-        You put in the stake. It shows total return and separate profit,
-        so you&apos;re not squinting at a slip trying to figure it out.
-      </p>
-    </div>
-    <div className="info-block">
-      <h3>Optionally fights the vig</h3>
-      <p>
-        If you add the other side&apos;s odds for each leg, it estimates a
-        no-vig &quot;fair&quot; price and how much edge the book might
-        have on your parlay.
-      </p>
-    </div>
-  </div>
+          {/* INFO / HOW IT WORKS – you can rewrite all this freely */}
+          <section className="info-section" id="how-it-works">
+            <h2 className="info-title">How it works</h2>
+            <div className="info-grid">
+              <div className="info-block">
+                <h3>The numbers underneath</h3>
+                <p>
+                  American odds map to an actual percentage. The calculator
+                  turns your parlay into one implied chance.
+                </p>
+              </div>
+              <div className="info-block">
+                <h3>Follow the payout</h3>
+                <p>
+                  Stake, total return, and profit are split out so you&apos;re
+                  not guessing from a slip.
+                </p>
+              </div>
+              <div className="info-block">
+                <h3>Fight the vig (if you want)</h3>
+                <p>
+                  Add both sides of a market to see a no-vig fair view and how
+                  tight the parlay price might be.
+                </p>
+              </div>
+            </div>
 
-  <p className="info-disclaimer">
-   As of writing, no affiliation with any sportsbook, and all information comes from you
-  </p>
-</section>
-
+            <p className="info-disclaimer">
+              This is information, not advice. Know your limits and your
+              local laws.
+            </p>
+          </section>
         </main>
 
         <footer className="site-footer">
-  <span>Parlay odds tool</span>
-  <span>Be smart</span>
-</footer>
-
+          <span>Parlay Odds Tool</span>
+          <span>Built so the math isn&apos;t a mystery.</span>
+        </footer>
       </div>
     </div>
   );
