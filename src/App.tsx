@@ -152,6 +152,39 @@ export default function App() {
     };
   }, [parsedStake, validLegs, legs, parlayMetrics]);
 
+    // EV based on fair (no-vig) probability vs book payout
+  const evMetrics = useMemo(() => {
+    if (!parsedStake || !parlayMetrics || !fairParlayMetrics) return null;
+
+    const pTrue = fairParlayMetrics.parlayProbFair;
+    const stakeAmount = parsedStake;
+    const winProfit = parlayMetrics.profit; // profit if it hits
+
+    if (
+      !Number.isFinite(pTrue) ||
+      pTrue <= 0 ||
+      pTrue >= 1 ||
+      !Number.isFinite(winProfit) ||
+      stakeAmount <= 0
+    ) {
+      return null;
+    }
+
+    // EV = pTrue * winProfit - (1 - pTrue) * stake
+    const ev = pTrue * winProfit - (1 - pTrue) * stakeAmount;
+
+    // EV per $100 staked
+    const evPer100 = (ev / stakeAmount) * 100;
+    const evPct = (ev / stakeAmount) * 100; // same number, just labeled as %
+
+    return {
+      evPerBet: ev,
+      evPer100,
+      evPct,
+    };
+  }, [parsedStake, parlayMetrics, fairParlayMetrics]);
+
+
   // TEXT TO COPY
   const summaryText = useMemo(() => {
     if (!parlayMetrics || !parsedStake || !validLegs.length) return "";
@@ -584,6 +617,62 @@ export default function App() {
                           </span>
                         </div>
                       )}
+                      {/* ===== EV ANALYSIS ===== */}
+<h3 className="card-title" style={{ marginTop: 16 }}>
+  EV Analysis
+</h3>
+
+{evMetrics ? (
+  <div className="summary-grid">
+
+    <div className="summary-item">
+      <span className="summary-label">EV per bet (expected profit)</span>
+      <span className="summary-value">
+        {evMetrics.evPerBet >= 0 ? "+" : "-"}$
+        {Math.abs(evMetrics.evPerBet).toFixed(2)}
+      </span>
+    </div>
+
+    <div className="summary-item">
+      <span className="summary-label">EV per $100 staked</span>
+      <span className="summary-value">
+        {evMetrics.evPer100 >= 0 ? "+" : "-"}$
+        {Math.abs(evMetrics.evPer100).toFixed(2)}
+      </span>
+    </div>
+
+  </div>
+) : (
+  <p className="field-helper">
+    Add opponent odds for all legs to unlock EV analysis.
+  </p>
+)}
+
+                            {evMetrics && (
+        <>
+          <div className="summary-item">
+            <span className="summary-label">
+              EV per bet (based on fair probs)
+            </span>
+            <span className="summary-value">
+              {evMetrics.evPerBet >= 0 ? "+" : "-"}$
+              {Math.abs(evMetrics.evPerBet).toFixed(2)}
+            </span>
+          </div>
+
+          <div className="summary-item">
+            <span className="summary-label">
+              EV per $100 staked
+            </span>
+            <span className="summary-value">
+              {evMetrics.evPer100 >= 0 ? "+" : "-"}$
+              {Math.abs(evMetrics.evPer100).toFixed(2)}
+            </span>
+          </div>
+        </>
+      )}
+
+
                     </div>
                   )}
                 </div>
