@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import html2canvas from "html2canvas";
 
 import {
   americanToDecimal,
@@ -23,9 +24,10 @@ export default function App() {
   ]);
 
   const [copied, setCopied] = useState(false);
-  const [shareCopied, setShareCopied] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false); // “Sharp mode”
   const [showAdvancedExplainer, setShowAdvancedExplainer] = useState(false); // collapsible explanation
+
+  const shareCardRef = useRef<HTMLDivElement | null>(null);
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -48,7 +50,8 @@ export default function App() {
           .map((l, idx) => ({
             id: typeof l.id === "number" ? l.id : idx + 1,
             label: typeof l.label === "string" ? l.label : "",
-            americanOdds: typeof l.americanOdds === "string" ? l.americanOdds : "",
+            americanOdds:
+              typeof l.americanOdds === "string" ? l.americanOdds : "",
             opponentOdds:
               typeof l.opponentOdds === "string" ? l.opponentOdds : "",
           }))
@@ -254,51 +257,6 @@ export default function App() {
       .join(" · ");
   }, [parlayMetrics, parsedStake, validLegs.length, legs]);
 
-  // Share-text for Reddit / Discord
-  const shareText = useMemo(() => {
-    if (!parlayMetrics || !parsedStake || !validLegs.length) return "";
-
-    const lines: string[] = [];
-
-    lines.push(`Stake: $${parsedStake.toFixed(2)}`);
-    lines.push("Legs:");
-    legs.forEach((leg, i) => {
-      const label = leg.label.trim() || `Leg ${i + 1}`;
-      const oddsPart = leg.opponentOdds.trim()
-        ? `${leg.americanOdds} vs ${leg.opponentOdds}`
-        : leg.americanOdds;
-      lines.push(`${i + 1}) ${label} (${oddsPart})`);
-    });
-
-    lines.push("");
-    lines.push(
-      `Book parlay implied: ${(parlayMetrics.parlayImpliedProb * 100).toFixed(
-        1
-      )}%`
-    );
-
-    if (fairParlayMetrics) {
-      lines.push(
-        `Fair parlay implied (no-vig): ${(fairParlayMetrics.parlayProbFair * 100).toFixed(
-          1
-        )}%`
-      );
-      if (fairParlayMetrics.edgePct != null) {
-        const edgePct = fairParlayMetrics.edgePct * 100;
-        const sign = edgePct >= 0 ? "+" : "";
-        lines.push(`Book edge vs fair: ${sign}${edgePct.toFixed(1)}%`);
-      }
-    }
-
-    if (evMetrics) {
-      const evPer100 = evMetrics.evPct; // EV per $100
-      const sign = evPer100 >= 0 ? "+" : "";
-      lines.push(`EV per $100: ${sign}$${Math.abs(evPer100).toFixed(1)}`);
-    }
-
-    return lines.join("\n");
-  }, [parlayMetrics, fairParlayMetrics, evMetrics, parsedStake, legs]);
-
   function updateLeg(
     id: number,
     field: "americanOdds" | "opponentOdds" | "label",
@@ -360,6 +318,26 @@ export default function App() {
     return value >= 0 ? "value-positive" : "value-negative";
   }
 
+  async function handleDownloadSlip() {
+    if (!shareCardRef.current || typeof window === "undefined") return;
+
+    try {
+      const canvas = await html2canvas(shareCardRef.current, {
+        backgroundColor: "#000000",
+        scale: window.devicePixelRatio || 2,
+      });
+      const dataUrl = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.href = dataUrl;
+      link.download = "parlay-slip.png";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error("Failed to download slip", err);
+    }
+  }
+
   return (
     <div className="app">
       <div className="app-inner">
@@ -382,8 +360,8 @@ export default function App() {
             <div className="hero-content">
               <h1 className="hero-title">See the Book&apos;s Edge</h1>
               <p className="hero-subtitle">
-                Check your parlay like a normal slip, then flip on sharp mode to see
-                vig, fair odds, and EV from both sides of the market.
+                Check your parlay like a normal slip, then flip on sharp mode to
+                see vig, fair odds, and EV from both sides of the market.
               </p>
 
               <div className="hero-cta-row">
@@ -409,8 +387,8 @@ export default function App() {
             <header className="app-header">
               <h2 className="app-title">Parlay &amp; Vig Calculator</h2>
               <p className="app-subtitle">
-                Use it as a quick slip checker, or turn on sharp mode to see how much
-                the book is taxing your bet.
+                Use it as a quick slip checker, or turn on sharp mode to see how
+                much the book is taxing your bet.
               </p>
             </header>
 
@@ -471,7 +449,6 @@ export default function App() {
 
                       const oppOddsNum = Number(leg.opponentOdds);
 
-                      // Use helper to get vig / fair + edge when both sides valid
                       const market =
                         isValid && leg.opponentOdds.trim() !== ""
                           ? analyzeTwoSidedMarket(oddsNum, oppOddsNum)
@@ -524,7 +501,6 @@ export default function App() {
                                 </p>
                               )}
 
-                            {/* Implied odds = secondary detail now */}
                             {isValid && prob !== null && decimal !== null && (
                               <p className="field-helper">
                                 Implied:{" "}
@@ -595,8 +571,8 @@ export default function App() {
 
                   {!allValid && (
                     <p className="field-error field-error--top">
-                      Fill out valid American odds for all legs to see
-                      combined parlay results.
+                      Fill out valid American odds for all legs to see combined
+                      parlay results.
                     </p>
                   )}
                 </div>
@@ -604,7 +580,7 @@ export default function App() {
 
               {/* RIGHT COLUMN – summary + sharp mode */}
               <section className="card">
-                {/* Basic parlay summary (standard calculator mode) */}
+                {/* Basic parlay summary */}
                 <div className="card-section card-section--with-header">
                   <h3 className="card-title">Parlay summary</h3>
                 </div>
@@ -618,7 +594,7 @@ export default function App() {
 
                   {parlayMetrics && (
                     <>
-                      {/* copy summary row */}
+                      {/* actions row */}
                       <div
                         style={{
                           display: "flex",
@@ -635,7 +611,7 @@ export default function App() {
                             color: "#6de0b0",
                           }}
                         >
-                          Copy or share this parlay
+                          Download or copy this parlay
                         </span>
                         <div
                           style={{
@@ -644,6 +620,13 @@ export default function App() {
                             flexWrap: "wrap",
                           }}
                         >
+                          <button
+                            type="button"
+                            className="btn btn-outline btn-sm"
+                            onClick={handleDownloadSlip}
+                          >
+                            Download slip
+                          </button>
                           <button
                             type="button"
                             className="btn btn-outline btn-sm"
@@ -663,28 +646,7 @@ export default function App() {
                                 });
                             }}
                           >
-                            {copied ? "Copied" : "Copy basic"}
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-outline btn-sm"
-                            onClick={() => {
-                              if (!shareText) return;
-                              navigator.clipboard
-                                .writeText(shareText)
-                                .then(() => {
-                                  setShareCopied(true);
-                                  setTimeout(
-                                    () => setShareCopied(false),
-                                    1500
-                                  );
-                                })
-                                .catch(() => {
-                                  // ignore
-                                });
-                            }}
-                          >
-                            {shareCopied ? "Copied" : "Copy for Reddit/Discord"}
+                            {copied ? "Copied" : "Copy text"}
                           </button>
                         </div>
                       </div>
@@ -705,18 +667,14 @@ export default function App() {
                         </div>
 
                         <div className="summary-item">
-                          <span className="summary-label">
-                            Payout (return)
-                          </span>
+                          <span className="summary-label">Payout (return)</span>
                           <span className="summary-value">
                             ${parlayMetrics.potentialReturn.toFixed(2)}
                           </span>
                         </div>
 
                         <div className="summary-item">
-                          <span className="summary-label">
-                            Profit (winnings)
-                          </span>
+                          <span className="summary-label">Profit (winnings)</span>
                           <span className="summary-value">
                             ${parlayMetrics.profit.toFixed(2)}
                           </span>
@@ -731,17 +689,128 @@ export default function App() {
                           </span>
                         </div>
                       </div>
+
+                      {/* SHARE IMAGE / SLIP PREVIEW */}
+                      <div ref={shareCardRef} className="share-card">
+                        <div className="share-card-header">Parlay slip</div>
+                        <div className="share-card-body">
+                          <div className="share-card-row">
+                            <span className="share-card-label">Stake</span>
+                            <span className="share-card-value">
+                              ${parsedStake!.toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="share-card-row">
+                            <span className="share-card-label">Implied</span>
+                            <span className="share-card-value">
+                              {(parlayMetrics.parlayImpliedProb * 100).toFixed(1)}%
+                            </span>
+                          </div>
+                          <div className="share-card-row">
+                            <span className="share-card-label">Payout</span>
+                            <span className="share-card-value">
+                              ${parlayMetrics.potentialReturn.toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="share-card-row">
+                            <span className="share-card-label">Profit</span>
+                            <span className="share-card-value">
+                              ${parlayMetrics.profit.toFixed(2)}
+                            </span>
+                          </div>
+
+                          {/* Sharp info only when Sharp mode is ON */}
+                          {showAdvanced && fairParlayMetrics && (
+                            <>
+                              <div className="share-card-row">
+                                <span className="share-card-label">
+                                  Fair (no-vig) odds
+                                </span>
+                                <span className="share-card-value">
+                                  {fairParlayMetrics.fairDecimal.toFixed(2)}
+                                </span>
+                              </div>
+                              {fairParlayMetrics.edgePct != null && (
+                                <div className="share-card-row">
+                                  <span className="share-card-label">
+                                    Book edge
+                                  </span>
+                                  <span
+                                    className={
+                                      "share-card-value " +
+                                      valueSignClass(fairParlayMetrics.edgePct)
+                                    }
+                                  >
+                                    {(fairParlayMetrics.edgePct * 100).toFixed(1)}
+                                    %
+                                  </span>
+                                </div>
+                              )}
+                            </>
+                          )}
+
+                          {showAdvanced && evMetrics && (
+                            <div className="share-card-row">
+                              <span className="share-card-label">
+                                EV per $100
+                              </span>
+                              <span
+                                className={
+                                  "share-card-value " +
+                                  valueSignClass(evMetrics.evPct)
+                                }
+                              >
+                                {evMetrics.evPct >= 0 ? "+" : "-"}$
+                                {Math.abs(evMetrics.evPct).toFixed(1)}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Legs list inside the share image */}
+                          <div className="share-card-legs">
+                            <div className="share-card-legs-title">Legs</div>
+                            <ul className="share-card-legs-list">
+                              {legs.map((leg, index) => {
+                                const hasLabel = leg.label.trim().length > 0;
+                                const primaryLabel = hasLabel
+                                  ? leg.label.trim()
+                                  : `Leg ${index + 1}`;
+                                const oddsPart = leg.opponentOdds.trim()
+                                  ? `${leg.americanOdds} vs ${leg.opponentOdds}`
+                                  : leg.americanOdds || "—";
+
+                                return (
+                                  <li
+                                    key={leg.id}
+                                    className="share-card-leg-row"
+                                  >
+                                    <div className="share-card-leg-main">
+                                      <span className="share-card-leg-index">
+                                        {index + 1}.
+                                      </span>
+                                      <span className="share-card-leg-label">
+                                        {primaryLabel}
+                                      </span>
+                                    </div>
+                                    <div className="share-card-leg-odds">
+                                      {oddsPart}
+                                    </div>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
                     </>
                   )}
 
-                  {!parlayMetrics &&
-                    parsedStake &&
-                    validLegs.length > 0 && (
-                      <p className="field-error">
-                        Something&apos;s off with the current inputs.
-                        Double-check your odds.
-                      </p>
-                    )}
+                  {!parlayMetrics && parsedStake && validLegs.length > 0 && (
+                    <p className="field-error">
+                      Something&apos;s off with the current inputs. Double-check
+                      your odds.
+                    </p>
+                  )}
                 </div>
 
                 {/* Sharp mode: vig + fair odds + EV, behind a toggle */}
@@ -763,7 +832,8 @@ export default function App() {
                   {!showAdvanced && (
                     <p className="field-helper">
                       Turn this on to see the vig (overround), fair no-vig price,
-                      and long-run EV of your parlay based on both sides of each leg.
+                      and long-run EV of your parlay based on both sides of each
+                      leg.
                     </p>
                   )}
 
@@ -777,7 +847,6 @@ export default function App() {
 
                   {showAdvanced && fairParlayMetrics && (
                     <>
-                      {/* VIG + FAIR ODDS FIRST (the interesting part) */}
                       <div className="summary-grid" style={{ marginBottom: 8 }}>
                         {fairParlayMetrics.avgLegHold != null && (
                           <div className="summary-item">
@@ -816,7 +885,6 @@ export default function App() {
                         )}
                       </div>
 
-                      {/* EV SECOND: “Is this bet good or bad long term?” */}
                       {evMetrics && (
                         <>
                           <div
@@ -860,7 +928,6 @@ export default function App() {
                         </>
                       )}
 
-                      {/* Collapsible “what does this mean?” explainer */}
                       <button
                         type="button"
                         className="btn btn-outline btn-sm"
