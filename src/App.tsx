@@ -1,39 +1,16 @@
 import { useMemo, useState } from "react";
 
+import {
+  americanToDecimal,
+  americanToImpliedProb,
+  analyzeTwoSidedMarket,
+} from "./utils/odds";
+
 type Leg = {
   id: number;
   americanOdds: string; // your side
   opponentOdds: string; // other side of the market (optional, for no-vig)
 };
-
-function americanToDecimal(odds: number): number | null {
-  if (!Number.isFinite(odds) || odds === 0) return null;
-  if (odds > 0) return 1 + odds / 100;
-  return 1 + 100 / Math.abs(odds);
-}
-
-function americanToImpliedProb(odds: number): number | null {
-  if (!Number.isFinite(odds) || odds === 0) return null;
-  if (odds > 0) {
-    return 100 / (odds + 100);
-  }
-  return Math.abs(odds) / (Math.abs(odds) + 100);
-}
-
-/**
- * Given odds for your side and opponent's side,
- * compute a "no-vig" probability for your side by normalizing.
- */
-function noVigProbFromMarket(yourOdds: number, oppOdds: number): number | null {
-  const pYouRaw = americanToImpliedProb(yourOdds);
-  const pOppRaw = americanToImpliedProb(oppOdds);
-  if (pYouRaw == null || pOppRaw == null) return null;
-
-  const sum = pYouRaw + pOppRaw;
-  if (!Number.isFinite(sum) || sum <= 0) return null;
-
-  return pYouRaw / sum;
-}
 
 export default function App() {
   const [stake, setStake] = useState<string>("10");
@@ -113,13 +90,17 @@ export default function App() {
     if (!allHaveOpp) return null;
 
     const fairLegProbs: number[] = [];
+    const legHolds: number[] = [];
 
     for (const leg of legs) {
       const yourOddsNum = Number(leg.americanOdds);
       const oppOddsNum = Number(leg.opponentOdds);
-      const pNoVig = noVigProbFromMarket(yourOddsNum, oppOddsNum);
-      if (pNoVig == null) return null;
-      fairLegProbs.push(pNoVig);
+
+      const market = analyzeTwoSidedMarket(yourOddsNum, oppOddsNum);
+      if (!market) return null;
+
+      fairLegProbs.push(market.pNoVigYou);
+      legHolds.push(market.hold);
     }
 
     const parlayProbFair = fairLegProbs.reduce((acc, p) => acc * p, 1);
@@ -129,6 +110,11 @@ export default function App() {
     const fairReturn = parsedStake * fairDecimal;
     const fairProfit = fairReturn - parsedStake;
 
+    const avgLegHold =
+      legHolds.length > 0
+        ? legHolds.reduce((a, b) => a + b, 0) / legHolds.length
+        : null;
+
     if (!parlayMetrics) {
       return {
         parlayProbFair,
@@ -136,6 +122,7 @@ export default function App() {
         fairReturn,
         fairProfit,
         edgePct: null as number | null,
+        avgLegHold,
       };
     }
 
@@ -149,10 +136,11 @@ export default function App() {
       fairReturn,
       fairProfit,
       edgePct,
+      avgLegHold,
     };
   }, [parsedStake, validLegs, legs, parlayMetrics]);
 
-    // EV based on fair (no-vig) probability vs book payout
+  // EV based on fair (no-vig) probability vs book payout
   const evMetrics = useMemo(() => {
     if (!parsedStake || !parlayMetrics || !fairParlayMetrics) return null;
 
@@ -183,7 +171,6 @@ export default function App() {
       evPct,
     };
   }, [parsedStake, parlayMetrics, fairParlayMetrics]);
-
 
   // TEXT TO COPY
   const summaryText = useMemo(() => {
@@ -253,27 +240,26 @@ export default function App() {
         </header>
 
         <main className="site-main">
-          {/* HERO – you can change this text however you want */}
+          {/* HERO */}
           <section className="hero" id="top">
             <div className="hero-content">
               <h1 className="hero-title">Check Your Bets</h1>
               <p className="hero-subtitle">
-                Implied odds and more... with a fun theme
+                Implied odds, market vig, and house edge from both sides.
               </p>
 
               <div className="hero-cta-row">
                 <a href="#calculator" className="btn hero-cta">
                   Open Calculator
                 </a>
-                <p className="hero-note">
-                  No sportsbook affiliates
-                </p>
+                <p className="hero-note">No sportsbook affiliates.</p>
               </div>
 
               <div className="hero-badges">
                 <span className="hero-badge">Implied chance</span>
                 <span className="hero-badge">Payout &amp; profit</span>
-                <span className="hero-badge">No-vig view (optional)</span>
+                <span className="hero-badge">No-vig view</span>
+                <span className="hero-badge">House edge from both sides</span>
               </div>
             </div>
           </section>
@@ -283,7 +269,7 @@ export default function App() {
             <header className="app-header">
               <h2 className="app-title">Parlay Calculator</h2>
               <p className="app-subtitle">
-                Enter your odds
+                Enter both sides of a market to reveal the vig and house edge.
               </p>
             </header>
 
@@ -335,6 +321,14 @@ export default function App() {
                         decimal !== null &&
                         prob !== null;
 
+                      const oppOddsNum = Number(leg.opponentOdds);
+
+                      // Use helper to get vig / fair + edge when both sides valid
+                      const market =
+                        isValid && leg.opponentOdds.trim() !== ""
+                          ? analyzeTwoSidedMarket(oddsNum, oppOddsNum)
+                          : null;
+
                       return (
                         <div key={leg.id} className="leg-card">
                           <div className="leg-main">
@@ -384,8 +378,7 @@ export default function App() {
                               className="field-label"
                               style={{ marginTop: 8 }}
                             >
-                              Opponent odds (optional, for no-vig fair
-                              payout)
+                              Opponent odds (other side, for vig / fair view)
                             </label>
                             <input
                               type="number"
@@ -400,6 +393,23 @@ export default function App() {
                               placeholder="-110"
                               className="input"
                             />
+
+                            {market && (
+                              <p className="field-helper">
+                                Market hold (both sides):{" "}
+                                <strong>
+                                  {(market.hold * 100).toFixed(2)}%
+                                </strong>{" "}
+                                · House edge vs fair on this leg:{" "}
+                                <strong>
+                                  {market.houseEdgePct >= 0 ? "+" : "-"}
+                                  {Math.abs(
+                                    market.houseEdgePct
+                                  ).toFixed(2)}
+                                  %
+                                </strong>
+                              </p>
+                            )}
                           </div>
 
                           <div className="leg-actions">
@@ -550,7 +560,7 @@ export default function App() {
                     )}
                 </div>
 
-                {/* Fair / no-vig section */}
+                {/* Fair / no-vig section + vig/edge focus */}
                 <div className="card-section">
                   <h3 className="card-title" style={{ marginBottom: 8 }}>
                     No-vig / Fair payout (optional)
@@ -558,9 +568,9 @@ export default function App() {
 
                   {!fairParlayMetrics && (
                     <p className="field-helper">
-                      To estimate a no-vig parlay payout, enter opponent
-                      odds for every leg. We&apos;ll strip out the house
-                      edge using both sides of the market.
+                      To estimate a no-vig parlay payout and market vig,
+                      enter opponent odds for every leg. We&apos;ll strip out
+                      the house cut using both sides of the market.
                     </p>
                   )}
 
@@ -604,83 +614,69 @@ export default function App() {
                         </span>
                       </div>
 
+                      {fairParlayMetrics.avgLegHold != null && (
+                        <div className="summary-item">
+                          <span className="summary-label">
+                            Avg market hold per leg (vig)
+                          </span>
+                          <span className="summary-value">
+                            {(fairParlayMetrics.avgLegHold * 100).toFixed(2)}%
+                          </span>
+                        </div>
+                      )}
+
                       {fairParlayMetrics.edgePct != null && (
                         <div className="summary-item">
                           <span className="summary-label">
                             Estimated book edge on this parlay
                           </span>
                           <span className="summary-value">
-                            {(
-                              fairParlayMetrics.edgePct * 100
-                            ).toFixed(2)}
-                            %
+                            {(fairParlayMetrics.edgePct * 100).toFixed(2)}%
                           </span>
                         </div>
                       )}
-                      {/* ===== EV ANALYSIS ===== */}
-<h3 className="card-title" style={{ marginTop: 16 }}>
-  EV Analysis
-</h3>
-
-{evMetrics ? (
-  <div className="summary-grid">
-
-    <div className="summary-item">
-      <span className="summary-label">EV per bet (expected profit)</span>
-      <span className="summary-value">
-        {evMetrics.evPerBet >= 0 ? "+" : "-"}$
-        {Math.abs(evMetrics.evPerBet).toFixed(2)}
-      </span>
-    </div>
-
-    <div className="summary-item">
-      <span className="summary-label">EV per $100 staked</span>
-      <span className="summary-value">
-        {evMetrics.evPer100 >= 0 ? "+" : "-"}$
-        {Math.abs(evMetrics.evPer100).toFixed(2)}
-      </span>
-    </div>
-
-  </div>
-) : (
-  <p className="field-helper">
-    Add opponent odds for all legs to unlock EV analysis.
-  </p>
-)}
-
-                            {evMetrics && (
-        <>
-          <div className="summary-item">
-            <span className="summary-label">
-              EV per bet (based on fair probs)
-            </span>
-            <span className="summary-value">
-              {evMetrics.evPerBet >= 0 ? "+" : "-"}$
-              {Math.abs(evMetrics.evPerBet).toFixed(2)}
-            </span>
-          </div>
-
-          <div className="summary-item">
-            <span className="summary-label">
-              EV per $100 staked
-            </span>
-            <span className="summary-value">
-              {evMetrics.evPer100 >= 0 ? "+" : "-"}$
-              {Math.abs(evMetrics.evPer100).toFixed(2)}
-            </span>
-          </div>
-        </>
-      )}
-
-
                     </div>
+                  )}
+
+                  {/* ===== EV ANALYSIS (cleaned, no duplication) ===== */}
+                  <h3 className="card-title" style={{ marginTop: 16 }}>
+                    EV Analysis
+                  </h3>
+
+                  {evMetrics ? (
+                    <div className="summary-grid">
+                      <div className="summary-item">
+                        <span className="summary-label">
+                          EV per bet (expected profit)
+                        </span>
+                        <span className="summary-value">
+                          {evMetrics.evPerBet >= 0 ? "+" : "-"}$
+                          {Math.abs(evMetrics.evPerBet).toFixed(2)}
+                        </span>
+                      </div>
+
+                      <div className="summary-item">
+                        <span className="summary-label">
+                          EV per $100 staked
+                        </span>
+                        <span className="summary-value">
+                          {evMetrics.evPer100 >= 0 ? "+" : "-"}$
+                          {Math.abs(evMetrics.evPer100).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="field-helper">
+                      Add opponent odds for all legs (and a valid stake) to
+                      unlock EV analysis.
+                    </p>
                   )}
                 </div>
               </section>
             </div>
           </section>
 
-          {/* INFO / HOW IT WORKS – you can rewrite all this freely */}
+          {/* INFO / HOW IT WORKS */}
           <section className="info-section" id="how-it-works">
             <h2 className="info-title">How it works</h2>
             <div className="info-grid">
@@ -699,10 +695,11 @@ export default function App() {
                 </p>
               </div>
               <div className="info-block">
-                <h3>Fight the vig (if you want)</h3>
+                <h3>Fight the vig (for real)</h3>
                 <p>
-                  Add both sides of a market to see a no-vig fair view and how
-                  tight the parlay price might be.
+                  Add both sides of a market to see the overround (vig),
+                  estimate the fair no-vig price, and how much edge the book
+                  might have.
                 </p>
               </div>
             </div>
