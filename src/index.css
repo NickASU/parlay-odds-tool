@@ -588,3 +588,47 @@ body {
     align-items: center;
   }
 }
+
+/* Value coloring for EV / edge */
+.value-positive {
+  color: #6de0b0;
+}
+
+.value-negative {
+  color: #ff6b6b;
+}
+
+/* Inline link-style button (for "Try an example parlay") */
+.btn-inline-link {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin-top: 4px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  color: #6de0b0;
+  text-decoration: underline;
+}
+
+.btn-inline-link:hover {
+  opacity: 0.85;
+}
+
+/* Simple mobile tweak: stack columns on narrow screens */
+@media (max-width: 768px) {
+  .app-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .card {
+    padding: 1rem;
+  }
+
+  .hero-cta-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   americanToDecimal,
@@ -13,6 +13,8 @@ type Leg = {
   opponentOdds: string; // other side of the market (optional, for no-vig)
 };
 
+const STORAGE_KEY = "twoSidedVigCalculatorState";
+
 export default function App() {
   const [stake, setStake] = useState<string>("10");
   const [legs, setLegs] = useState<Leg[]>([
@@ -21,8 +23,56 @@ export default function App() {
   ]);
 
   const [copied, setCopied] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false); // “Sharp mode”
   const [showAdvancedExplainer, setShowAdvancedExplainer] = useState(false); // collapsible explanation
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    try {
+      if (typeof window === "undefined") return;
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as {
+        stake?: string;
+        legs?: Leg[];
+      };
+
+      if (parsed.stake && Number(parsed.stake) > 0) {
+        setStake(parsed.stake);
+      }
+
+      if (Array.isArray(parsed.legs) && parsed.legs.length > 0) {
+        // basic validation
+        const cleaned: Leg[] = parsed.legs
+          .map((l, idx) => ({
+            id: typeof l.id === "number" ? l.id : idx + 1,
+            label: typeof l.label === "string" ? l.label : "",
+            americanOdds: typeof l.americanOdds === "string" ? l.americanOdds : "",
+            opponentOdds:
+              typeof l.opponentOdds === "string" ? l.opponentOdds : "",
+          }))
+          .filter((l) => l.americanOdds.trim() !== "");
+
+        if (cleaned.length > 0) {
+          setLegs(cleaned);
+        }
+      }
+    } catch {
+      // ignore localStorage errors
+    }
+  }, []);
+
+  // Persist to localStorage whenever stake or legs change
+  useEffect(() => {
+    try {
+      if (typeof window === "undefined") return;
+      const data = JSON.stringify({ stake, legs });
+      window.localStorage.setItem(STORAGE_KEY, data);
+    } catch {
+      // ignore
+    }
+  }, [stake, legs]);
 
   const parsedStake = useMemo(() => {
     const n = Number(stake);
@@ -174,7 +224,7 @@ export default function App() {
     };
   }, [parsedStake, parlayMetrics, fairParlayMetrics]);
 
-  // TEXT TO COPY
+  // TEXT TO COPY (basic summary)
   const summaryText = useMemo(() => {
     if (!parlayMetrics || !parsedStake || !validLegs.length) return "";
 
@@ -195,7 +245,7 @@ export default function App() {
     return [
       `Parlay`,
       `Stake $${parsedStake.toFixed(2)}`,
-      `Implied ${(parlayMetrics.parlayImpliedProb * 100).toFixed(2)}%`,
+      `Implied ${(parlayMetrics.parlayImpliedProb * 100).toFixed(1)}%`,
       `Return $${parlayMetrics.potentialReturn.toFixed(2)}`,
       `Profit $${parlayMetrics.profit.toFixed(2)}`,
       legsStr && `Legs ${legsStr}`,
@@ -203,6 +253,51 @@ export default function App() {
       .filter(Boolean)
       .join(" · ");
   }, [parlayMetrics, parsedStake, validLegs.length, legs]);
+
+  // Share-text for Reddit / Discord
+  const shareText = useMemo(() => {
+    if (!parlayMetrics || !parsedStake || !validLegs.length) return "";
+
+    const lines: string[] = [];
+
+    lines.push(`Stake: $${parsedStake.toFixed(2)}`);
+    lines.push("Legs:");
+    legs.forEach((leg, i) => {
+      const label = leg.label.trim() || `Leg ${i + 1}`;
+      const oddsPart = leg.opponentOdds.trim()
+        ? `${leg.americanOdds} vs ${leg.opponentOdds}`
+        : leg.americanOdds;
+      lines.push(`${i + 1}) ${label} (${oddsPart})`);
+    });
+
+    lines.push("");
+    lines.push(
+      `Book parlay implied: ${(parlayMetrics.parlayImpliedProb * 100).toFixed(
+        1
+      )}%`
+    );
+
+    if (fairParlayMetrics) {
+      lines.push(
+        `Fair parlay implied (no-vig): ${(fairParlayMetrics.parlayProbFair * 100).toFixed(
+          1
+        )}%`
+      );
+      if (fairParlayMetrics.edgePct != null) {
+        const edgePct = fairParlayMetrics.edgePct * 100;
+        const sign = edgePct >= 0 ? "+" : "";
+        lines.push(`Book edge vs fair: ${sign}${edgePct.toFixed(1)}%`);
+      }
+    }
+
+    if (evMetrics) {
+      const evPer100 = evMetrics.evPct; // EV per $100
+      const sign = evPer100 >= 0 ? "+" : "";
+      lines.push(`EV per $100: ${sign}$${Math.abs(evPer100).toFixed(1)}`);
+    }
+
+    return lines.join("\n");
+  }, [parlayMetrics, fairParlayMetrics, evMetrics, parsedStake, legs]);
 
   function updateLeg(
     id: number,
@@ -232,6 +327,37 @@ export default function App() {
     setLegs((prev) =>
       prev.length <= 1 ? prev : prev.filter((l) => l.id !== id)
     );
+  }
+
+  // Example parlay loader
+  function loadExampleParlay() {
+    setStake("25");
+    setLegs([
+      {
+        id: 1,
+        label: "Ravens ML",
+        americanOdds: "-135",
+        opponentOdds: "-115",
+      },
+      {
+        id: 2,
+        label: "Over 45.5",
+        americanOdds: "-110",
+        opponentOdds: "-110",
+      },
+      {
+        id: 3,
+        label: "Anytime TD scorer",
+        americanOdds: "+180",
+        opponentOdds: "-210",
+      },
+    ]);
+    setShowAdvanced(true);
+  }
+
+  function valueSignClass(value: number | null | undefined): string {
+    if (value == null || !Number.isFinite(value)) return "";
+    return value >= 0 ? "value-positive" : "value-negative";
   }
 
   return (
@@ -303,6 +429,18 @@ export default function App() {
                     placeholder="10"
                     className="input"
                   />
+                  <button
+                    type="button"
+                    className="btn btn-inline-link"
+                    onClick={loadExampleParlay}
+                  >
+                    Try an example parlay
+                  </button>
+                  {!parsedStake && stake.trim() !== "" && (
+                    <p className="field-error">
+                      Enter a positive stake amount.
+                    </p>
+                  )}
                 </div>
 
                 <div className="card-section card-section--with-header">
@@ -422,14 +560,18 @@ export default function App() {
                               <p className="field-helper">
                                 Vig on this market:{" "}
                                 <strong>
-                                  {(market.hold * 100).toFixed(2)}%
+                                  {(market.hold * 100).toFixed(1)}%
                                 </strong>{" "}
                                 · Edge vs fair on your side:{" "}
-                                <strong>
+                                <strong
+                                  className={valueSignClass(
+                                    market.houseEdgePct
+                                  )}
+                                >
                                   {market.houseEdgePct >= 0 ? "+" : "-"}
                                   {Math.abs(
                                     market.houseEdgePct
-                                  ).toFixed(2)}
+                                  ).toFixed(1)}
                                   %
                                 </strong>
                               </p>
@@ -468,12 +610,6 @@ export default function App() {
                 </div>
 
                 <div className="card-section">
-                  {!parsedStake && stake.trim() !== "" && (
-                    <p className="field-error">
-                      Enter a positive stake amount.
-                    </p>
-                  )}
-
                   {!validLegs.length && (
                     <p className="field-helper">
                       Add at least one valid leg to calculate the parlay.
@@ -490,6 +626,7 @@ export default function App() {
                           alignItems: "center",
                           marginBottom: 6,
                           gap: 8,
+                          flexWrap: "wrap",
                         }}
                       >
                         <span
@@ -498,29 +635,58 @@ export default function App() {
                             color: "#6de0b0",
                           }}
                         >
-                          Copy this parlay as text
+                          Copy or share this parlay
                         </span>
-                        <button
-                          type="button"
-                          className="btn btn-outline btn-sm"
-                          onClick={() => {
-                            if (!summaryText) return;
-                            navigator.clipboard
-                              .writeText(summaryText)
-                              .then(() => {
-                                setCopied(true);
-                                setTimeout(
-                                  () => setCopied(false),
-                                  1500
-                                );
-                              })
-                              .catch(() => {
-                                // ignore clipboard errors
-                              });
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: 8,
+                            flexWrap: "wrap",
                           }}
                         >
-                          {copied ? "Copied" : "Copy"}
-                        </button>
+                          <button
+                            type="button"
+                            className="btn btn-outline btn-sm"
+                            onClick={() => {
+                              if (!summaryText) return;
+                              navigator.clipboard
+                                .writeText(summaryText)
+                                .then(() => {
+                                  setCopied(true);
+                                  setTimeout(
+                                    () => setCopied(false),
+                                    1500
+                                  );
+                                })
+                                .catch(() => {
+                                  // ignore clipboard errors
+                                });
+                            }}
+                          >
+                            {copied ? "Copied" : "Copy basic"}
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-outline btn-sm"
+                            onClick={() => {
+                              if (!shareText) return;
+                              navigator.clipboard
+                                .writeText(shareText)
+                                .then(() => {
+                                  setShareCopied(true);
+                                  setTimeout(
+                                    () => setShareCopied(false),
+                                    1500
+                                  );
+                                })
+                                .catch(() => {
+                                  // ignore
+                                });
+                            }}
+                          >
+                            {shareCopied ? "Copied" : "Copy for Reddit/Discord"}
+                          </button>
+                        </div>
                       </div>
 
                       <div className="summary-grid">
@@ -529,17 +695,11 @@ export default function App() {
                             Implied chance of parlay
                           </span>
                           <span className="summary-value">
-                            {(
-                              parlayMetrics.parlayImpliedProb * 100
-                            ).toFixed(2)}
-                            %
+                            {(parlayMetrics.parlayImpliedProb * 100).toFixed(1)}%
                             <span className="summary-sub">
                               {" "}
                               (about 1 in{" "}
-                              {(
-                                1 / parlayMetrics.parlayImpliedProb
-                              ).toFixed(1)}
-                              )
+                              {(1 / parlayMetrics.parlayImpliedProb).toFixed(1)})
                             </span>
                           </span>
                         </div>
@@ -549,8 +709,7 @@ export default function App() {
                             Payout (return)
                           </span>
                           <span className="summary-value">
-                            $
-                            {parlayMetrics.potentialReturn.toFixed(2)}
+                            ${parlayMetrics.potentialReturn.toFixed(2)}
                           </span>
                         </div>
 
@@ -626,10 +785,7 @@ export default function App() {
                               Avg market hold per leg (vig)
                             </span>
                             <span className="summary-value">
-                              {(fairParlayMetrics.avgLegHold * 100).toFixed(
-                                2
-                              )}
-                              %
+                              {(fairParlayMetrics.avgLegHold * 100).toFixed(1)}%
                             </span>
                           </div>
                         )}
@@ -648,8 +804,13 @@ export default function App() {
                             <span className="summary-label">
                               Estimated book edge on this parlay
                             </span>
-                            <span className="summary-value">
-                              {(fairParlayMetrics.edgePct * 100).toFixed(2)}%
+                            <span
+                              className={
+                                "summary-value " +
+                                valueSignClass(fairParlayMetrics.edgePct)
+                              }
+                            >
+                              {(fairParlayMetrics.edgePct * 100).toFixed(1)}%
                             </span>
                           </div>
                         )}
@@ -657,26 +818,46 @@ export default function App() {
 
                       {/* EV SECOND: “Is this bet good or bad long term?” */}
                       {evMetrics && (
-                        <div className="summary-grid" style={{ marginBottom: 8 }}>
-                          <div className="summary-item">
-                            <span className="summary-label">
-                              EV per bet (expected profit)
-                            </span>
-                            <span className="summary-value">
-                              {evMetrics.evPerBet >= 0 ? "+" : "-"}$
-                              {Math.abs(evMetrics.evPerBet).toFixed(2)}
-                            </span>
+                        <>
+                          <div
+                            className="summary-grid"
+                            style={{ marginBottom: 4 }}
+                          >
+                            <div className="summary-item">
+                              <span className="summary-label">
+                                EV per bet (expected profit)
+                              </span>
+                              <span
+                                className={
+                                  "summary-value " +
+                                  valueSignClass(evMetrics.evPerBet)
+                                }
+                              >
+                                {evMetrics.evPerBet >= 0 ? "+" : "-"}$
+                                {Math.abs(evMetrics.evPerBet).toFixed(2)}
+                              </span>
+                            </div>
+                            <div className="summary-item">
+                              <span className="summary-label">
+                                EV per $100 staked
+                              </span>
+                              <span
+                                className={
+                                  "summary-value " +
+                                  valueSignClass(evMetrics.evPct)
+                                }
+                              >
+                                {evMetrics.evPct >= 0 ? "+" : "-"}$
+                                {Math.abs(evMetrics.evPct).toFixed(1)}
+                              </span>
+                            </div>
                           </div>
-                          <div className="summary-item">
-                            <span className="summary-label">
-                              EV percentage (per dollar staked)
-                            </span>
-                            <span className="summary-value">
-                              {evMetrics.evPct >= 0 ? "+" : "-"}
-                              {Math.abs(evMetrics.evPct).toFixed(2)}%
-                            </span>
-                          </div>
-                        </div>
+                          <p className="field-helper">
+                            Green numbers favor you; red numbers favor the book.
+                            EV is the long-run average if you placed this exact
+                            bet over and over (assuming the inputs are accurate).
+                          </p>
+                        </>
                       )}
 
                       {/* Collapsible “what does this mean?” explainer */}
@@ -697,8 +878,8 @@ export default function App() {
                         <div className="field-helper" style={{ marginTop: 6 }}>
                           <p style={{ marginBottom: 4 }}>
                             <strong>Vig / hold</strong> is the built-in tax on a
-                            market. If both sides add up to 105%, the extra 5%
-                            is the book&apos;s cut.
+                            market. If both sides add up to 105%, the extra 5% is
+                            the book&apos;s cut.
                           </p>
                           <p style={{ marginBottom: 4 }}>
                             <strong>Fair odds (no-vig)</strong> are what the odds
