@@ -16,6 +16,30 @@ type Leg = {
 
 const STORAGE_KEY = "twoSidedVigCalculatorState";
 
+function track(event: string, params?: Record<string, unknown>) {
+  if (typeof window === "undefined") return;
+  const w = window as unknown as { gtag?: (...args: any[]) => void };
+  try {
+    if (typeof w.gtag === "function") {
+      w.gtag("event", event, {
+        app: "parlay-odds-tool",
+        ...params,
+      });
+    }
+  } catch {
+    // ignore analytics errors
+  }
+}
+
+const DEFAULT_EXAMPLE = {
+  stake: "25",
+  legs: [
+    { id: 1, label: "Ravens ML", americanOdds: "-135", opponentOdds: "" },
+    { id: 2, label: "Over 45.5", americanOdds: "-110", opponentOdds: "" },
+    { id: 3, label: "Anytime TD scorer", americanOdds: "+180", opponentOdds: "" },
+  ] as Leg[],
+};
+
 export default function App() {
   const [stake, setStake] = useState<string>("10");
   const [legs, setLegs] = useState<Leg[]>([
@@ -23,8 +47,10 @@ export default function App() {
     { id: 2, label: "", americanOdds: "-110", opponentOdds: "-110" },
   ]);
 
+  const [usingExample, setUsingExample] = useState(false);
+
   const [copied, setCopied] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false); // “Sharp mode”
+  const [showAdvanced, setShowAdvanced] = useState(false); // “Reveal sportsbook tax (vig)”
   const [showAdvancedExplainer, setShowAdvancedExplainer] = useState(false); // collapsible explanation
 
   const shareCardRef = useRef<HTMLDivElement | null>(null);
@@ -34,7 +60,14 @@ export default function App() {
     try {
       if (typeof window === "undefined") return;
       const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
+      if (!raw) {
+        // First-run experience: show a real example immediately (reduces bounce).
+        setStake(DEFAULT_EXAMPLE.stake);
+        setLegs(DEFAULT_EXAMPLE.legs);
+        setUsingExample(true);
+        track("example_autoload");
+        return;
+      }
       const parsed = JSON.parse(raw) as {
         stake?: string;
         legs?: Leg[];
@@ -262,6 +295,8 @@ export default function App() {
     field: "americanOdds" | "opponentOdds" | "label",
     value: string
   ) {
+    setUsingExample(false);
+    track("edit_leg", { field });
     setLegs((prev) =>
       prev.map((leg) =>
         leg.id === id ? { ...leg, [field]: value } : leg
@@ -270,6 +305,7 @@ export default function App() {
   }
 
   function addLeg() {
+    track("add_leg", { before_count: legs.length });
     setLegs((prev) => [
       ...prev,
       {
@@ -279,38 +315,24 @@ export default function App() {
         opponentOdds: "-110",
       },
     ]);
+    setUsingExample(false);
   }
 
   function removeLeg(id: number) {
+    track("remove_leg", { before_count: legs.length });
     setLegs((prev) =>
       prev.length <= 1 ? prev : prev.filter((l) => l.id !== id)
     );
+    setUsingExample(false);
   }
 
   // Example parlay loader
   function loadExampleParlay() {
-    setStake("25");
-    setLegs([
-      {
-        id: 1,
-        label: "Ravens ML",
-        americanOdds: "-135",
-        opponentOdds: "-115",
-      },
-      {
-        id: 2,
-        label: "Over 45.5",
-        americanOdds: "-110",
-        opponentOdds: "-110",
-      },
-      {
-        id: 3,
-        label: "Anytime TD scorer",
-        americanOdds: "+180",
-        opponentOdds: "-210",
-      },
-    ]);
-    setShowAdvanced(true);
+    track("load_example");
+    setStake(DEFAULT_EXAMPLE.stake);
+    setLegs(DEFAULT_EXAMPLE.legs);
+    setShowAdvanced(false);
+    setUsingExample(true);
   }
 
   function valueSignClass(value: number | null | undefined): string {
@@ -320,6 +342,8 @@ export default function App() {
 
   async function handleDownloadSlip() {
     if (!shareCardRef.current || typeof window === "undefined") return;
+
+    track("download_slip");
 
     try {
       const canvas = await html2canvas(shareCardRef.current, {
@@ -358,10 +382,12 @@ export default function App() {
           {/* HERO */}
           <section className="hero" id="top">
             <div className="hero-content">
-              <h1 className="hero-title">See the Book&apos;s Edge</h1>
+              <h1 className="hero-title">
+                How Much Is the Sportsbook Taxing Your Parlay?
+              </h1>
               <p className="hero-subtitle">
-                Check your parlay like a normal slip, then flip on sharp mode to
-                see vig, fair odds, and EV from both sides of the market.
+                Paste your odds. We show the hidden vig and your real EV — no
+                accounts, no feeds.
               </p>
 
               <div className="hero-cta-row">
@@ -369,7 +395,7 @@ export default function App() {
                   Open Calculator
                 </a>
                 <p className="hero-note">
-                  No odds feeds, no affiliates. Just math.
+                  No affiliates. No picks. Just math.
                 </p>
               </div>
 
@@ -387,10 +413,16 @@ export default function App() {
             <header className="app-header">
               <h2 className="app-title">Parlay &amp; Vig Calculator</h2>
               <p className="app-subtitle">
-                Use it as a quick slip checker, or turn on sharp mode to see how
-                much the book is taxing your bet.
+                Quick slip checker first. Then reveal the sportsbook tax (vig)
+                using both sides of each market.
               </p>
             </header>
+
+            {usingExample && (
+              <div className="notice" role="status">
+                Example loaded — edit the legs to match your bet.
+              </div>
+            )}
 
             <div className="app-grid">
               {/* LEFT COLUMN – setup */}
@@ -403,7 +435,11 @@ export default function App() {
                     id="stake"
                     type="number"
                     value={stake}
-                    onChange={(e) => setStake(e.target.value)}
+                    onChange={(e) => {
+                      setUsingExample(false);
+                      track("edit_stake");
+                      setStake(e.target.value);
+                    }}
                     placeholder="10"
                     className="input"
                   />
@@ -412,7 +448,7 @@ export default function App() {
                     className="btn btn-inline-link"
                     onClick={loadExampleParlay}
                   >
-                    Try an example parlay
+                    Load an example
                   </button>
                   {!parsedStake && stake.trim() !== "" && (
                     <p className="field-error">
@@ -578,7 +614,7 @@ export default function App() {
                 </div>
               </section>
 
-              {/* RIGHT COLUMN – summary + sharp mode */}
+              {/* RIGHT COLUMN – summary + vig mode */}
               <section className="card">
                 {/* Basic parlay summary */}
                 <div className="card-section card-section--with-header">
@@ -632,6 +668,7 @@ export default function App() {
                             className="btn btn-outline btn-sm"
                             onClick={() => {
                               if (!summaryText) return;
+                              track("copy_text");
                               navigator.clipboard
                                 .writeText(summaryText)
                                 .then(() => {
@@ -719,7 +756,7 @@ export default function App() {
                             </span>
                           </div>
 
-                          {/* Sharp info only when Sharp mode is ON */}
+                          {/* Tax info only when Vig mode is ON */}
                           {showAdvanced && fairParlayMetrics && (
                             <>
                               <div className="share-card-row">
@@ -813,27 +850,27 @@ export default function App() {
                   )}
                 </div>
 
-                {/* Sharp mode: vig + fair odds + EV, behind a toggle */}
+                {/* Vig mode: behind a toggle */}
                 <div className="card-section card-section--with-header">
-                  <h3 className="card-title">Sharp mode</h3>
+                  <h3 className="card-title">Reveal sportsbook tax (vig)</h3>
                   <button
                     type="button"
                     className="btn btn-outline btn-sm"
                     onClick={() => {
                       setShowAdvancedExplainer(false);
+                      track("toggle_vig_mode", { next: !showAdvanced });
                       setShowAdvanced((v) => !v);
                     }}
                   >
-                    {showAdvanced ? "Turn off" : "Turn on"}
+                    {showAdvanced ? "Hide" : "Reveal"}
                   </button>
                 </div>
 
                 <div className="card-section">
                   {!showAdvanced && (
                     <p className="field-helper">
-                      Turn this on to see the vig (overround), fair no-vig price,
-                      and long-run EV of your parlay based on both sides of each
-                      leg.
+                      Reveal the vig (overround), fair no-vig odds, and long-run
+                      EV using both sides of each market.
                     </p>
                   )}
 
@@ -986,7 +1023,7 @@ export default function App() {
                 </p>
               </div>
               <div className="info-block">
-                <h3>Sharp mode</h3>
+                <h3>Reveal sportsbook tax (vig)</h3>
                 <p>
                   Add both sides of each market and we calculate the vig, strip it
                   out to find fair odds, and estimate the book&apos;s edge and your
