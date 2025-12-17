@@ -756,3 +756,215 @@ body {
     gap: 0.5rem;
   }
 }
+
+/* ===========================================================
+   PRICING SCALE
+   =========================================================== */
+
+.pricing-scale {
+  margin-top: 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 255, 102, 0.25);
+  background: rgba(2, 19, 10, 0.55);
+  padding: 10px 10px 8px;
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.75);
+}
+
+.pricing-scale--compact {
+  padding: 8px 8px 6px;
+  border-color: rgba(0, 255, 102, 0.22);
+  background: rgba(2, 19, 10, 0.45);
+}
+
+.pricing-scale-title {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #8fffd3;
+  margin-bottom: 4px; /* was 8px */
+}
+
+
+.pricing-scale-bar {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+
+  /* Reserve vertical space for the floating label */
+  padding-top: 22px;
+}
+
+
+.pricing-scale-anchor-label {
+  font-size: 0.7rem;
+  color: #6de0b0;
+  opacity: 0.9;
+  white-space: nowrap;
+}
+
+.pricing-scale-right-label {
+  font-size: 0.7rem;
+  color: #6de0b0;
+  opacity: 0.9;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.pricing-scale-track {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 255, 102, 0.35);
+  background:
+    linear-gradient(90deg, rgba(0,255,102,0.10), rgba(0,255,102,0.04)),
+    rgba(0,0,0,0.35);
+  box-shadow: inset 0 0 6px rgba(0,0,0,0.85);
+  overflow: visible;
+}
+
+.pricing-scale-ticks {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  align-items: center;
+  pointer-events: none;
+}
+
+.pricing-scale-ticks span {
+  height: 100%;
+  border-left: 1px solid rgba(0, 255, 102, 0.18);
+}
+
+.pricing-scale-ticks span:first-child {
+  border-left: none;
+}
+
+.pricing-scale-marker {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* Dot sits on the bar */
+.pricing-scale-marker-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 255, 102, 0.9);
+  background: rgba(0, 255, 102, 0.25);
+  box-shadow: 0 0 10px rgba(0, 255, 102, 0.35);
+  display: block;
+}
+
+/* Label floats above the bar (no overlap) */
+.pricing-scale-marker-label {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  font-size: 0.72rem;
+  color: #a9ffe1;
+  white-space: nowrap;
+  text-shadow: 0 0 6px rgba(0, 255, 102, 0.25);
+
+  /* readable pill */
+  background: rgba(0, 0, 0, 0.65);
+  border: 1px solid rgba(0, 255, 102, 0.22);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.pricing-scale-cap-indicator {
+  position: absolute;
+  right: -10px;
+  top: -18px;
+  font-size: 0.9rem;
+  color: #a9ffe1;
+  opacity: 0.9;
+}
+
+.pricing-scale-neg-indicator {
+  position: absolute;
+  left: -10px;
+  top: -18px;
+  font-size: 0.9rem;
+  color: #a9ffe1;
+  opacity: 0.9;
+}
+
+.pricing-scale-explanation {
+  margin-top: 10px;
+  font-size: 0.75rem;
+  color: #6de0b0;
+  opacity: 0.95;
+  line-height: 1.45;
+}
+
+.pricing-scale-explanation p {
+  margin: 0 0 6px;
+}
+
+.pricing-scale-note {
+  opacity: 0.85;
+}
+
+/* ===========================================================
+   SCALE KEY
+   =========================================================== */
+
+.pricing-scale-key {
+  margin-top: 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 255, 102, 0.18);
+  background: rgba(0, 0, 0, 0.25);
+  padding: 8px 10px;
+}
+
+.pricing-scale-key--compact {
+  padding: 6px 8px;
+}
+
+.pricing-scale-key-title {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #8fffd3;
+  margin-bottom: 6px;
+}
+
+.pricing-scale-key ul {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pricing-scale-key li {
+  font-size: 0.75rem;
+  color: #6de0b0;
+  line-height: 1.35;
+}
+
+.pricing-scale-key li strong {
+  color: #a9ffe1;
+}
+
+.pricing-scale-key li span {
+  display: block;
+  opacity: 0.9;
+  margin-top: 2px;
+}
+
+/* ===========================================================
+   SHARE CARD SCALE WRAP
+   =========================================================== */
+
+.share-card-scale {
+  margin-top: 6px;
+  border-top: 1px dashed rgba(0, 255, 102, 0.25);
+  padding-top: 8px;
+}
