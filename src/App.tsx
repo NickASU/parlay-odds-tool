@@ -38,7 +38,7 @@ export default function App() {
                 <div className="hero-badges">
                   <span className="hero-badge">Slip-style payout</span>
                   <span className="hero-badge">Remove-a-leg analysis</span>
-                  <span className="hero-badge">P</span>
+                  <span className="hero-badge">Parlay Price Check</span>
                 </div>
               </div>
             </section>
