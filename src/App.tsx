@@ -32,13 +32,13 @@ export default function App() {
                   <a href="#calculator" className="btn hero-cta">
                     Open Calculator
                   </a>
-                  <p className="hero-note">No odds feeds, no affiliates. Just math.</p>
+                  <p className="hero-note">Check the math before placing the bet</p>
                 </div>
 
                 <div className="hero-badges">
                   <span className="hero-badge">Slip-style payout</span>
                   <span className="hero-badge">Remove-a-leg analysis</span>
-                  <span className="hero-badge">Pricing Scale</span>
+                  <span className="hero-badge">P</span>
                 </div>
               </div>
             </section>
