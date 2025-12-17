@@ -68,12 +68,12 @@ export default function App() {
               <div className="info-grid">
                 <div className="info-block">
                   <h3>Outcome</h3>
-                  <p>Shows implied chance + payout for the current parlay view.</p>
+                  <p>Add or remove legs to check new odds.</p>
                 </div>
                 <div className="info-block">
-                  <h3>Remove a leg</h3>
+                  <h3>Check Book vs Reality</h3>
                   <p>
-                    Check boxes to preview removing legs. Chance + payout update immediately.
+                    See book offering vs what you should make.
                   </p>
                 </div>
                 <div className="info-block">
